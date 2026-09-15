@@ -1,0 +1,628 @@
+### Staj API — Uçtan Uca Smoke Test
+### Visual Studio HTTP Client ile çalıştırın. İstekleri yukarıdan aşağı SIRAYLA gönderin;
+### her istek bir öncekinin response'undan token/ID okuyor. Bir istek fail olursa
+### akış kırılır — orada durup sebebe bakın.
+###
+### Rastgele Guid'ler için "Send Request" öncesi VS otomatik $guid tag'ını çözer.
+### Kayıt sırasında her çalıştırmada aynı email'i kullanmamak için timestamp ekliyoruz.
+
+@baseUrl = http://localhost:5041
+@adminEmail = admin@staj.local
+@adminPassword = Admin123!
+
+### Test kullanıcıları için sabit email'ler.
+### İkinci kez smoke'u çalıştıracaksan bu iki değeri manuel değiştir
+### (ör. freelancer2@staj.test) çünkü aynı email tekrar register olamaz.
+@freelancerEmail = freelancer1@staj.test
+@freelancerPassword = Freelance123!
+@clientEmail = client1@staj.test
+@clientPassword = Client123!
+
+
+###############################################################################
+### 1. ADMIN LOGIN
+###############################################################################
+
+# @name adminLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+###
+@adminToken = {{adminLogin.response.body.$.data.accessToken}}
+
+### Teşhis: adminToken gerçekten çözülüyor mu? Bu istek 200 dönerse chain çalışıyor demek.
+GET {{baseUrl}}/api/users/me
+Authorization: Bearer {{adminToken}}
+
+
+###############################################################################
+### 2. MASTER DATA — Kategori ve skill listesi geliyor mu?
+###############################################################################
+
+### 10 kategori dönmeli (seed'den)
+# @name listCategories
+GET {{baseUrl}}/api/categories
+
+###
+### Web Geliştirme kategorisinin ID'sini yakala (list sıralamasına göre değişebilir,
+### aşağıdaki sabit "0" indeksi sadece "bir tane geldi" doğrulaması içindir).
+### Aşağıda ID'yi kullanmak için ismiyle arama yapmıyoruz; response'taki ilk
+### aktif kategorinin ID'sini kullanıyoruz.
+@firstCategoryId = {{listCategories.response.body.$.data[0].id}}
+
+### 47 skill dönmeli
+# @name listSkills
+GET {{baseUrl}}/api/skills
+
+###
+### İlk 3 skill'in ID'sini yakala (JobPost ve Freelancer skill setleri için)
+@skill1Id = {{listSkills.response.body.$.data[0].id}}
+@skill2Id = {{listSkills.response.body.$.data[1].id}}
+@skill3Id = {{listSkills.response.body.$.data[2].id}}
+
+
+###############################################################################
+### 3. KULLANICI KAYITLARI
+###############################################################################
+
+### Freelancer kaydı
+# @name registerFreelancer
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{freelancerEmail}}",
+  "password": "{{freelancerPassword}}",
+  "firstName": "Furkan",
+  "lastName": "Test",
+  "role": "Freelancer"
+}
+
+###
+
+### Client kaydı
+# @name registerClient
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{clientEmail}}",
+  "password": "{{clientPassword}}",
+  "firstName": "Ahmet",
+  "lastName": "Musteri",
+  "role": "Client"
+}
+
+
+###############################################################################
+### 4. LOGIN — Token alalım
+###############################################################################
+
+# @name loginFreelancer
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{freelancerEmail}}",
+  "password": "{{freelancerPassword}}"
+}
+
+###
+@freelancerToken = {{loginFreelancer.response.body.$.data.accessToken}}
+@freelancerUserId = {{loginFreelancer.response.body.$.data.userId}}
+
+###
+
+# @name loginClient
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{clientEmail}}",
+  "password": "{{clientPassword}}"
+}
+
+###
+@clientToken = {{loginClient.response.body.$.data.accessToken}}
+@clientUserId = {{loginClient.response.body.$.data.userId}}
+
+
+###############################################################################
+### 5. /me endpoint'leri — Token doğru çalışıyor mu?
+###############################################################################
+
+# @name meFreelancer
+GET {{baseUrl}}/api/users/me
+Authorization: Bearer {{freelancerToken}}
+
+###
+
+# @name meClient
+GET {{baseUrl}}/api/users/me
+Authorization: Bearer {{clientToken}}
+
+
+###############################################################################
+### 6. FREELANCER PROFİL AKIŞI
+###############################################################################
+
+### Ad-soyad güncelle
+PUT {{baseUrl}}/api/users/me/basic-info
+Authorization: Bearer {{freelancerToken}}
+Content-Type: application/json
+
+{
+  "firstName": "Furkan",
+  "lastName": "Yılmaz"
+}
+
+###
+
+### Freelancer profil upsert
+PUT {{baseUrl}}/api/freelancers/me
+Authorization: Bearer {{freelancerToken}}
+Content-Type: application/json
+
+{
+  "title": "Senior .NET Developer",
+  "bio": "10+ yıl .NET tecrübem var. Clean Architecture ve DDD üzerine çalışıyorum.",
+  "experienceYears": 10,
+  "hourlyRateMin": 30,
+  "hourlyRateMax": 60,
+  "currency": "USD",
+  "country": "Türkiye",
+  "city": "İstanbul",
+  "cvUrl": "https://example.com/cv.pdf",
+  "linkedInUrl": "https://linkedin.com/in/furkantest",
+  "gitHubUrl": "https://github.com/furkantest",
+  "websiteUrl": "https://furkan.dev",
+  "isAvailable": true
+}
+
+###
+
+### Skill ata — seed'deki ilk 3 skill
+PUT {{baseUrl}}/api/freelancers/me/skills
+Authorization: Bearer {{freelancerToken}}
+Content-Type: application/json
+
+{
+  "skills": [
+    { "skillId": "{{skill1Id}}", "proficiencyLevel": 5 },
+    { "skillId": "{{skill2Id}}", "proficiencyLevel": 4 },
+    { "skillId": "{{skill3Id}}", "proficiencyLevel": 3 }
+  ]
+}
+
+###
+
+### Portfolio kalemi ekle
+# @name addPortfolio
+POST {{baseUrl}}/api/freelancers/me/portfolio
+Authorization: Bearer {{freelancerToken}}
+Content-Type: application/json
+
+{
+  "title": "E-Ticaret Platformu",
+  "description": ".NET 10 tabanlı, mikroservis mimarisi ile geliştirilmiş e-ticaret altyapısı.",
+  "projectUrl": "https://github.com/furkan/eticaret",
+  "imageUrl": "https://example.com/img/eticaret.png",
+  "displayOrder": 1
+}
+
+###
+@portfolioItemId = {{addPortfolio.response.body.$.data}}
+
+###
+
+### Kendi profilimi getir — bio, skill'ler, portfolio, rating dolu gelmeli
+# @name myFreelancerProfile
+GET {{baseUrl}}/api/freelancers/me
+Authorization: Bearer {{freelancerToken}}
+
+###
+@freelancerProfileId = {{myFreelancerProfile.response.body.$.data.id}}
+
+
+###############################################################################
+### 7. CLIENT PROFİL AKIŞI
+###############################################################################
+
+### Client profil upsert (ContactPreference enum: Email=1, Phone=2, PlatformMessage=3)
+PUT {{baseUrl}}/api/clients/me
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{
+  "companyName": "Test Yazılım A.Ş.",
+  "industry": "Bilişim",
+  "about": "Yenilikçi yazılım projelerinde uzman ekiplerle çalışıyoruz.",
+  "websiteUrl": "https://testyazilim.example",
+  "country": "Türkiye",
+  "city": "Ankara",
+  "contactPreference": 3,
+  "contactPhone": "+905550001122"
+}
+
+###
+
+### Client profilimi getir
+GET {{baseUrl}}/api/clients/me
+Authorization: Bearer {{clientToken}}
+
+
+###############################################################################
+### 8. FREELANCER ARAMA — public endpoint
+###############################################################################
+
+### Herhangi bir token olmadan da çalışmalı, freelancer'ımız listede olmalı
+GET {{baseUrl}}/api/freelancers?page=1&pageSize=10
+
+###
+
+### Freelancer detay — public (rating summary + son yorumlar boş)
+GET {{baseUrl}}/api/freelancers/{{freelancerProfileId}}
+
+
+###############################################################################
+### 9. JOB POST AKIŞI — Client oluşturuyor
+###############################################################################
+
+### İlan oluştur (WorkMode enum: Remote=1, Hybrid=2, OnSite=3)
+# @name createJob
+POST {{baseUrl}}/api/jobs
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{
+  "categoryId": "{{firstCategoryId}}",
+  "title": "Senior .NET Developer aranıyor",
+  "description": "Clean Architecture ile mikroservis projesi için tecrübeli .NET geliştirici arıyoruz.",
+  "budgetMin": 40,
+  "budgetMax": 80,
+  "currency": "USD",
+  "workMode": 1,
+  "durationDays": 60,
+  "country": "Türkiye",
+  "city": "İstanbul",
+  "skillIds": [ "{{skill1Id}}", "{{skill2Id}}" ]
+}
+
+###
+@jobPostId = {{createJob.response.body.$.data}}
+
+###
+
+### İlanı yayına al
+POST {{baseUrl}}/api/jobs/{{jobPostId}}/publish
+Authorization: Bearer {{clientToken}}
+
+###
+
+### İlan detay — public
+GET {{baseUrl}}/api/jobs/{{jobPostId}}
+
+###
+
+### İlan araması — Freelancer bunu görebilmeli
+GET {{baseUrl}}/api/jobs?page=1&pageSize=10
+
+
+###############################################################################
+### 10. PROPOSAL AKIŞI — Application (Freelancer başvurur)
+###############################################################################
+
+### Freelancer ilana başvuru gönderir
+# @name submitApp
+POST {{baseUrl}}/api/proposals/applications
+Authorization: Bearer {{freelancerToken}}
+Content-Type: application/json
+
+{
+  "jobPostId": "{{jobPostId}}",
+  "coverMessage": "Merhaba, bu proje için biçilmiş kaftanım. .NET ve mikroservis konusunda 10 yıl tecrübem var.",
+  "proposedRate": 50,
+  "proposedDurationDays": 45,
+  "currency": "USD"
+}
+
+###
+@applicationId = {{submitApp.response.body.$.data}}
+
+###
+
+### Client'ın kendi ilanına gelen başvuruları görmesi
+GET {{baseUrl}}/api/proposals/for-job/{{jobPostId}}
+Authorization: Bearer {{clientToken}}
+
+###
+
+### Freelancer'ın kendi gönderdiği proposal listesi
+GET {{baseUrl}}/api/proposals/me
+Authorization: Bearer {{freelancerToken}}
+
+###
+
+### Client başvuruyu Accept ediyor — Freelancer'a bildirim düşmeli
+POST {{baseUrl}}/api/proposals/{{applicationId}}/accept
+Authorization: Bearer {{clientToken}}
+
+
+###############################################################################
+### 11. NOTIFICATION KONTROLÜ — Accept sonrası Freelancer'a bildirim
+###############################################################################
+
+### Okunmamış sayacı en az 1 olmalı
+GET {{baseUrl}}/api/notifications/me/unread-count
+Authorization: Bearer {{freelancerToken}}
+
+###
+
+### Bildirim listesi
+# @name freelancerNotifs
+GET {{baseUrl}}/api/notifications/me?page=1&pageSize=10
+Authorization: Bearer {{freelancerToken}}
+
+
+###############################################################################
+### 12. DIRECT OFFER — Client → Freelancer'a doğrudan teklif
+###############################################################################
+
+# @name submitOffer
+POST {{baseUrl}}/api/proposals/direct-offers
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{
+  "freelancerProfileId": "{{freelancerProfileId}}",
+  "coverMessage": "Küçük bir danışmanlık projesi var, ilgilenir misin?",
+  "proposedRate": 70,
+  "proposedDurationDays": 15,
+  "currency": "USD"
+}
+
+###
+@directOfferId = {{submitOffer.response.body.$.data}}
+
+###
+
+### Freelancer teklife bakar
+GET {{baseUrl}}/api/proposals/{{directOfferId}}
+Authorization: Bearer {{freelancerToken}}
+
+###
+
+### Freelancer teklifi Accept eder — Client'a bildirim düşmeli
+POST {{baseUrl}}/api/proposals/{{directOfferId}}/accept
+Authorization: Bearer {{freelancerToken}}
+
+###
+
+### Client tarafında bildirim
+GET {{baseUrl}}/api/notifications/me/unread-count
+Authorization: Bearer {{clientToken}}
+
+
+###############################################################################
+### 13. MESSAGING — Client Freelancer'a mesaj atsın
+###############################################################################
+
+### Conversation başlat (idempotent — aynı çift için tek conversation)
+# @name startConv
+POST {{baseUrl}}/api/conversations
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{
+  "otherUserId": "{{freelancerUserId}}"
+}
+
+###
+@conversationId = {{startConv.response.body.$.data}}
+
+###
+
+### Mesaj gönder
+POST {{baseUrl}}/api/messages
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{
+  "conversationId": "{{conversationId}}",
+  "content": "Merhaba, projeye ne zaman başlayabiliriz?"
+}
+
+###
+
+### Freelancer conversation listesi
+GET {{baseUrl}}/api/conversations
+Authorization: Bearer {{freelancerToken}}
+
+###
+
+### Freelancer mesajlarını görsün
+GET {{baseUrl}}/api/conversations/{{conversationId}}/messages?page=1&pageSize=20
+Authorization: Bearer {{freelancerToken}}
+
+###
+
+### Freelancer okunmamış sayacı
+GET {{baseUrl}}/api/messages/unread-count
+Authorization: Bearer {{freelancerToken}}
+
+###
+
+### Freelancer cevap versin
+POST {{baseUrl}}/api/messages
+Authorization: Bearer {{freelancerToken}}
+Content-Type: application/json
+
+{
+  "conversationId": "{{conversationId}}",
+  "content": "Merhaba, önümüzdeki hafta başlayabilirim."
+}
+
+###
+
+### Client okundu işaretlesin
+POST {{baseUrl}}/api/conversations/{{conversationId}}/read
+Authorization: Bearer {{clientToken}}
+
+
+###############################################################################
+### 14. REVIEW — Accepted Application üzerinden karşılıklı değerlendirme
+###############################################################################
+
+### Client → Freelancer'a değerlendirme
+# @name reviewByClient
+POST {{baseUrl}}/api/reviews
+Authorization: Bearer {{clientToken}}
+Content-Type: application/json
+
+{
+  "proposalId": "{{applicationId}}",
+  "rating": 5,
+  "comment": "Freelancer profesyonel, hızlı ve kaliteli iş çıkardı. Kesinlikle tekrar çalışırız."
+}
+
+###
+
+### Freelancer → Client'a değerlendirme
+# @name reviewByFreelancer
+POST {{baseUrl}}/api/reviews
+Authorization: Bearer {{freelancerToken}}
+Content-Type: application/json
+
+{
+  "proposalId": "{{applicationId}}",
+  "rating": 5,
+  "comment": "İşveren gereksinimleri net iletti, ödeme sürecinde iletişim çok iyiydi."
+}
+
+###
+
+### Freelancer'a yazılmış review'lar — public
+GET {{baseUrl}}/api/reviews/for-user/{{freelancerUserId}}?page=1&pageSize=10
+
+###
+
+### Freelancer'ın rating summary'si (ortalama + toplam) — public
+GET {{baseUrl}}/api/reviews/for-user/{{freelancerUserId}}/summary
+
+###
+
+### Freelancer detayında rating görünmeli (Module 8 entegrasyonu)
+GET {{baseUrl}}/api/freelancers/{{freelancerProfileId}}
+
+
+###############################################################################
+### 15. NOTIFICATION — Nihai kontrol ve mark-as-read
+###############################################################################
+
+### Freelancer'ın bildirim listesi (kabul, mesaj, review vb.)
+# @name finalNotifs
+GET {{baseUrl}}/api/notifications/me?page=1&pageSize=20
+Authorization: Bearer {{freelancerToken}}
+
+###
+@firstNotifId = {{finalNotifs.response.body.$.data.items[0].id}}
+
+###
+
+### Bir bildirimi okundu yap
+POST {{baseUrl}}/api/notifications/{{firstNotifId}}/read
+Authorization: Bearer {{freelancerToken}}
+
+###
+
+### Kalan tümünü okundu yap
+POST {{baseUrl}}/api/notifications/me/read-all
+Authorization: Bearer {{freelancerToken}}
+
+###
+
+### Unread-count artık 0 olmalı
+GET {{baseUrl}}/api/notifications/me/unread-count
+Authorization: Bearer {{freelancerToken}}
+
+
+###############################################################################
+### 16. YETKİ TESTLERİ — Negatif senaryolar
+###############################################################################
+
+### Token'sız /me → 401 dönmeli
+GET {{baseUrl}}/api/users/me
+
+###
+
+### Freelancer, Client'ın endpoint'ini çağırırsa → 403 veya iş kuralı hatası
+POST {{baseUrl}}/api/jobs
+Authorization: Bearer {{freelancerToken}}
+Content-Type: application/json
+
+{
+  "categoryId": "{{firstCategoryId}}",
+  "title": "Yetkisiz ilan denemesi",
+  "description": "Bu isteğin fail olması bekleniyor.",
+  "budgetMin": 10,
+  "budgetMax": 20,
+  "currency": "USD",
+  "workMode": 1,
+  "durationDays": 30,
+  "country": "TR",
+  "city": "İstanbul",
+  "skillIds": []
+}
+
+###
+
+### Aynı ilana ikinci başvuru → duplicate hatası bekleniyor (business rule)
+POST {{baseUrl}}/api/proposals/applications
+Authorization: Bearer {{freelancerToken}}
+Content-Type: application/json
+
+{
+  "jobPostId": "{{jobPostId}}",
+  "coverMessage": "Bu başvuru duplicate — Result.Fail dönmeli.",
+  "proposedRate": 50,
+  "proposedDurationDays": 45,
+  "currency": "USD"
+}
+
+
+###############################################################################
+### 17. REFRESH TOKEN — Access token yenileme
+###############################################################################
+
+### Not: Refresh, access token expire olduğunda kullanılır. Burada
+### sadece endpoint'in çalıştığını doğruluyoruz — response'u check et.
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "accessToken": "{{freelancerToken}}",
+  "refreshToken": "{{loginFreelancer.response.body.$.data.refreshToken}}"
+}
+
+
+###############################################################################
+### AKIŞ SONU
+###############################################################################
+### Buraya kadar geldiyse şu doğrulandı:
+### - Auth (register/login/refresh)
+### - Master data (kategori/skill seed)
+### - Profil upsert (Freelancer/Client)
+### - JobPost CRUD + publish
+### - Proposal Application ve DirectOffer akışı + Accept
+### - Messaging (conversation + mesaj + read)
+### - Review (karşılıklı + rating aggregation)
+### - Notification (unread-count, list, mark-as-read, read-all)
+### - Yetki filtreleri (401/403)
+### - Duplicate iş kuralı
+###
+### SignalR real-time push'ları için signalr-test.html sayfasını kullan.

@@ -1,0 +1,17 @@
+# docker-compose.yml (solution kök dizinine koy)
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: staj-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Staj_Pass123!"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - staj-mssql-data:/var/opt/mssql
+    restart: unless-stopped
+
+volumes:
+  staj-mssql-data:

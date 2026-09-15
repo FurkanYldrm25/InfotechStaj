@@ -1,0 +1,123 @@
+# -----------------------------------------------------------------------------
+# .NET build ciktilari
+# -----------------------------------------------------------------------------
+bin/
+obj/
+out/
+publish/
+*.dll
+*.exe
+*.pdb
+*.mdb
+*.cache
+
+# -----------------------------------------------------------------------------
+# NuGet
+# -----------------------------------------------------------------------------
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+project.lock.json
+project.assets.json
+*.nuget.props
+*.nuget.targets
+
+# -----------------------------------------------------------------------------
+# Visual Studio
+# -----------------------------------------------------------------------------
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.pidb
+*.svclog
+*.scc
+
+# ReSharper / Rider
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+.idea/
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# -----------------------------------------------------------------------------
+# Test / coverage
+# -----------------------------------------------------------------------------
+TestResults/
+[Cc]overage*/
+*.coverage
+*.coveragexml
+coverage.opencover.xml
+coverage.cobertura.xml
+.vscode-test/
+
+# -----------------------------------------------------------------------------
+# Loglar (Serilog logs klasoru)
+# -----------------------------------------------------------------------------
+logs/
+*.log
+
+# -----------------------------------------------------------------------------
+# Konfig ve secret dosyalari
+# -----------------------------------------------------------------------------
+# Ortam bazli / yerel appsettings dosyalari secret icerebilir
+appsettings.Local.json
+appsettings.*.Local.json
+*.local.json
+
+# .NET user secrets (zaten kullanici profilinde tutulur ama ihtiyaten)
+secrets.json
+
+# .env dosyalari
+.env
+.env.*
+!.env.example
+
+# -----------------------------------------------------------------------------
+# Docker
+# -----------------------------------------------------------------------------
+# Yerel volume/veri klasorleri
+docker-volumes/
+mssql-data/
+data/
+
+# -----------------------------------------------------------------------------
+# Isletim sistemi artefaktlari
+# -----------------------------------------------------------------------------
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# Linux
+*~
+.fuse_hidden*
+.Trash-*
+
+# -----------------------------------------------------------------------------
+# Yedek ve gecici dosyalar
+# -----------------------------------------------------------------------------
+*.bak
+*.tmp
+*.swp
+*.orig
+*.rej
+
+# -----------------------------------------------------------------------------
+# EF Core / Migration artefaktlari (opsiyonel — migration klasorunu commit'lemek istersen bu bloku kaldir)
+# -----------------------------------------------------------------------------
+# Migrations/

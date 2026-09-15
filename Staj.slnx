@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Çözüm Öğeleri/">
+    <File Path="docker-compose.yml" />
+  </Folder>
+  <Project Path="Staj.API/Staj.API.csproj" />
+  <Project Path="Staj.Application/Staj.Application.csproj" />
+  <Project Path="Staj.Domain/Staj.Domain.csproj" />
+  <Project Path="Staj.Infrastructure/Staj.Infrastructure.csproj" />
+  <Project Path="Staj.UnitTests/Staj.UnitTests.csproj" />
+</Solution>
