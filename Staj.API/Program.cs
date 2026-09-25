@@ -70,6 +70,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseSerilogRequestLogging();
 app.UseCors();
+
+// wwwroot altındaki statik UI dosyaları (index.html + JS/CSS) — API rotalarını etkilemez
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
